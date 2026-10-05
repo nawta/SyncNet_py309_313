@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - unreleased
+
+### Fixed
+- Pin `scenedetect[opencv]` to `>=0.6.0,<0.7`. scenedetect 0.7 removed
+  `scenedetect.video_manager`, which `syncnet_pipeline.py` imports.
+- `syncnet_python/__init__.py` raises `ImportError` with the original
+  message when an import fails. It used to set the exports to `None`.
+
+### Changed
+- License metadata is `MIT AND Apache-2.0` (PEP 639). The wheel and sdist
+  include `LICENSE`, `LICENSE-APACHE` and `NOTICE`. Files taken from
+  MoChaBench are Apache-2.0; NOTICE lists them.
+- Project URLs point at https://github.com/nawta/SyncNet_py309_313.
+- README rewritten with a tested quickstart.
+
+## [0.2.2] - 2025-07-07
+
+Published on PyPI; the code was committed to the repository in 0.2.3.
+
+### Added
+- `safe_syncnet_utils.py` with `safe_syncnet_inference`,
+  `extract_audio_from_video` and `calculate_lse_metrics`.
+- `SyncNetPipeline.inference(audio_path=None)` extracts the audio track
+  from the video.
+
+### Fixed
+- ffmpeg failures in `inference` raise `RuntimeError` with the ffmpeg message.
+
 ## [0.2.1] - 2025-01-06
 
 ### Fixed

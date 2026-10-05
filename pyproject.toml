@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=65", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "syncnet-python"
-version = "0.2.1"
+version = "0.2.3"
 description = "SyncNet: Audio-visual synchronization detection using deep learning. Updated version of https://github.com/joonson/syncnet_python for modern Python versions."
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "MIT"}
+license = "MIT AND Apache-2.0"
+license-files = ["LICENSE", "LICENSE-APACHE", "NOTICE"]
 authors = [
     {name = "SyncNet Python Contributors"},
 ]
@@ -20,7 +21,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -38,7 +38,7 @@ dependencies = [
     "numpy>=1.24.0",
     "scipy>=1.10.0",
     "pandas>=2.0.0",
-    "scenedetect[opencv]>=0.6.0",
+    "scenedetect[opencv]>=0.6.0,<0.7",
     "opencv-contrib-python>=4.8.0",
     "python-speech-features>=0.6",
     "ffmpeg-python>=0.2.0",
