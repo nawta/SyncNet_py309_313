@@ -45,9 +45,9 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/nawta/SyncNet_py313"
-"Bug Reports" = "https://github.com/nawta/SyncNet_py313/issues"
-"Source" = "https://github.com/nawta/SyncNet_py313"
+"Homepage" = "https://github.com/nawta/SyncNet_py309_313"
+"Repository" = "https://github.com/nawta/SyncNet_py309_313"
+"Issues" = "https://github.com/nawta/SyncNet_py309_313/issues"
 
 [project.optional-dependencies]
 dev = [

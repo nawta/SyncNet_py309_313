@@ -11,8 +11,8 @@
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/SyncNet_py313.git
-cd SyncNet_py313
+git clone https://github.com/nawta/SyncNet_py309_313.git
+cd SyncNet_py309_313
 ```
 
 ### 2. Create virtual environment
