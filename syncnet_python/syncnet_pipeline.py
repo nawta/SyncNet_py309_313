@@ -1,3 +1,14 @@
+# Modified from MoChaBench eval-lipsync/script/syncnet_pipeline.py
+# (https://github.com/congwei1230/MoChaBench, Apache-2.0) by nawta:
+# package-relative imports with a fallback for direct script execution;
+# ffmpeg_bin defaults to "ffmpeg" when None; the two shell
+# subprocess.call ffmpeg commands in _crop became subprocess.run argument
+# lists that raise RuntimeError on failure; added _extract_audio_from_video
+# so inference() accepts audio_path=None; the first three ffmpeg-python
+# calls in inference() raise RuntimeError on ffmpeg.Error; inference()
+# raises RuntimeError when no frames are extracted.
+# See NOTICE for licensing.
+
 import json
 import logging
 import os

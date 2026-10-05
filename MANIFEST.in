@@ -3,7 +3,6 @@ include LICENSE
 include LICENSE-APACHE
 include NOTICE
 include INSTALL.md
-include CLAUDE.md
 include requirements.txt
 
 # Include example files
@@ -15,7 +14,6 @@ recursive-include scripts *.py
 
 # Include package data
 recursive-include syncnet *.py
-recursive-include script *.py
 
 # Exclude unnecessary files
 global-exclude __pycache__

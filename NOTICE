@@ -6,9 +6,11 @@ This repository contains code under two licenses.
 1. MIT License (see LICENSE)
    The original SyncNet code by Joon Son Chung
    (https://github.com/joonson/syncnet_python) and the code written for
-   this repository, including syncnet_python/cli.py,
-   syncnet_python/__init__.py, syncnet_python/test_lse_metrics.py and the
-   syncnet/ and scripts/ folders.
+   this repository: syncnet_python/__init__.py, syncnet_python/cli.py,
+   syncnet_python/safe_syncnet_utils.py,
+   syncnet_python/test_error_handling.py,
+   syncnet_python/test_lse_metrics.py, and the syncnet/, scripts/ and
+   config/ folders.
 
 2. Apache License 2.0 (see LICENSE-APACHE)
    The following files come from MoChaBench
@@ -16,10 +18,11 @@ This repository contains code under two licenses.
    which is distributed under the Apache License 2.0. MoChaBench's LICENSE
    file does not name a copyright holder; the files are credited here to
    the MoChaBench authors. MoChaBench's versions are in turn based on the
-   original SyncNet code above.
+   original SyncNet code above. All files in this list except
+   syncnet_pipeline.py are unchanged copies of MoChaBench's files.
 
-     syncnet_python/syncnet_pipeline.py   (modified: error handling and
-                                           subprocess calls for ffmpeg)
+     syncnet_python/syncnet_pipeline.py   (modified by nawta; the file
+                                           header lists the changes)
      syncnet_python/SyncNetInstance.py
      syncnet_python/SyncNetModel.py
      syncnet_python/detectors/__init__.py

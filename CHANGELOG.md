@@ -8,8 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.3] - 2026-10-06
 
 ### Fixed
-- Pin `scenedetect[opencv]` to `>=0.6.0,<0.7`. scenedetect 0.7 removed
+- Pin `scenedetect` to `>=0.6.0,<0.7`. scenedetect 0.7 removed
   `scenedetect.video_manager`, which `syncnet_pipeline.py` imports.
+- Depend on `scenedetect` without the `[opencv]` extra, so
+  `opencv-contrib-python` is the only package that installs `cv2`.
+  The extra also installed `opencv-python`, a second copy of `cv2`.
 - `syncnet_python/__init__.py` raises `ImportError` with the original
   message when an import fails. It used to set the exports to `None`.
 
@@ -31,7 +34,19 @@ Published on PyPI; the code was committed to the repository in 0.2.3.
   from the video.
 
 ### Fixed
-- ffmpeg failures in `inference` raise `RuntimeError` with the ffmpeg message.
+- In `inference`, the ffmpeg-python calls for video conversion, frame
+  extraction and audio resampling catch `ffmpeg.Error` and raise
+  `RuntimeError("FFmpeg <step> failed: ...")`. The message contains
+  `str(ffmpeg.Error)`, which is "ffmpeg error (see stderr output for
+  detail)"; ffmpeg's own output goes to the console. The two ffmpeg calls
+  per face track (frame and audio extraction from each crop) are not
+  wrapped.
+- `inference` raises `RuntimeError("No frames were extracted from the
+  video")` when frame extraction yields no images.
+- The new `_extract_audio_from_video` runs ffmpeg with `subprocess.run`
+  and raises `RuntimeError("FFmpeg audio extraction failed: <ffmpeg
+  stderr>")`, or a "FFmpeg not found" `RuntimeError` when the binary is
+  missing.
 
 ## [0.2.1] - 2025-01-06
 
