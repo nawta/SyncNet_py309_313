@@ -215,11 +215,34 @@ class SyncNetPipeline:
         os.remove(tmp_avi)
         return final_avi
 
+    # ---------------------------- audio extraction helper ----------------- #
+    def _extract_audio_from_video(self, video_path: str, output_path: str) -> None:
+        """Extract audio from video file using ffmpeg."""
+        cfg = self.cfg
+        ffmpeg_bin = cfg.ffmpeg_bin if cfg.ffmpeg_bin is not None else "ffmpeg"
+        
+        cmd = [
+            ffmpeg_bin, "-y", "-i", str(video_path),
+            "-ac", "1", "-ar", str(cfg.audio_sample_rate),
+            "-acodec", "pcm_s16le", "-f", "wav",
+            str(output_path)
+        ]
+        
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            logging.info(f"Successfully extracted audio from {video_path} to {output_path}")
+        except subprocess.CalledProcessError as e:
+            logging.error(f"FFmpeg audio extraction failed: {e.stderr}")
+            raise RuntimeError(f"FFmpeg audio extraction failed: {e.stderr}")
+        except FileNotFoundError:
+            logging.error(f"FFmpeg not found at: {ffmpeg_bin}")
+            raise RuntimeError(f"FFmpeg not found. Please ensure ffmpeg is installed and in PATH.")
+
     # ---------------------------- inference -------------------------------- #
     def inference(
         self,
-        video_path: str,  # We do not extract audio from video_path!
-        audio_path: str,
+        video_path: str,
+        audio_path: Optional[str] = None,  # Now supports None for auto-extraction
         *,
         cache_dir: Optional[str] = None,
     ) -> Tuple[List[int], List[float], List[float], float, float, str, bool]:
@@ -229,34 +252,59 @@ class SyncNetPipeline:
             work.mkdir(parents=True, exist_ok=True)
 
         try:
+            # Handle audio_path=None case - extract audio from video
+            if audio_path is None:
+                logging.info("audio_path is None, extracting audio from video")
+                extracted_audio_path = work / "extracted_audio.wav"
+                self._extract_audio_from_video(video_path, str(extracted_audio_path))
+                actual_audio_path = str(extracted_audio_path)
+            else:
+                actual_audio_path = audio_path
+                logging.info(f"Using provided audio path: {actual_audio_path}")
+
             # 1) Convert video to constant-fps AVI
             avi = work / "video.avi"
-            (
-                ffmpeg.input(video_path)
-                .output(str(avi), **{"q:v": 2}, r=cfg.frame_rate, **{"async": 1})
-                .overwrite_output()
-                .run()
-            )
+            try:
+                (
+                    ffmpeg.input(video_path)
+                    .output(str(avi), **{"q:v": 2}, r=cfg.frame_rate, **{"async": 1})
+                    .overwrite_output()
+                    .run()
+                )
+            except ffmpeg.Error as e:
+                logging.error(f"FFmpeg video conversion failed: {e}")
+                raise RuntimeError(f"FFmpeg video conversion failed: {e}")
 
             # 2) Extract frames
             frames_dir = work / "frames"
             frames_dir.mkdir(exist_ok=True)
-            (
-                ffmpeg.input(str(avi))
-                .output(str(frames_dir / "%06d.jpg"), **{"q:v": 2}, f="image2", threads=1)
-                .overwrite_output()
-                .run()
-            )
+            try:
+                (
+                    ffmpeg.input(str(avi))
+                    .output(str(frames_dir / "%06d.jpg"), **{"q:v": 2}, f="image2", threads=1)
+                    .overwrite_output()
+                    .run()
+                )
+            except ffmpeg.Error as e:
+                logging.error(f"FFmpeg frame extraction failed: {e}")
+                raise RuntimeError(f"FFmpeg frame extraction failed: {e}")
+            
             frames = sorted(glob(str(frames_dir / "*.jpg")))
+            if not frames:
+                raise RuntimeError("No frames were extracted from the video")
 
             # 3) Resample speech
             audio_wav = work / "speech.wav"
-            (
-                ffmpeg.input(audio_path)
-                .output(str(audio_wav), ac=1, ar=cfg.audio_sample_rate, format="wav")
-                .overwrite_output()
-                .run()
-            )
+            try:
+                (
+                    ffmpeg.input(actual_audio_path)
+                    .output(str(audio_wav), ac=1, ar=cfg.audio_sample_rate, format="wav")
+                    .overwrite_output()
+                    .run()
+                )
+            except ffmpeg.Error as e:
+                logging.error(f"FFmpeg audio resampling failed: {e}")
+                raise RuntimeError(f"FFmpeg audio resampling failed: {e}")
 
             # 4) Face detection
             detections = []
