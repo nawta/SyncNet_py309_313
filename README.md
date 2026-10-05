@@ -1,169 +1,141 @@
-# SyncNet Python
+# syncnet-python
 
 [![PyPI version](https://badge.fury.io/py/syncnet-python.svg)](https://badge.fury.io/py/syncnet-python)
 [![Python](https://img.shields.io/pypi/pyversions/syncnet-python.svg)](https://pypi.org/project/syncnet-python/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Audio-visual synchronization detection using deep learning with modern Python architecture.
+A pip-installable SyncNet for Python 3.9 to 3.13 and PyTorch 2. It computes the confidence and minimum distance scores that talking-head and lip-sync papers report as LSE-C and LSE-D.
 
-This is a **refactored and enhanced version** of the original [SyncNet implementation](https://github.com/joonson/syncnet_python) by Joon Son Chung, updated for Python 3.9+ with clean architecture, comprehensive error handling, and performance optimizations.
+SyncNet (Chung and Zisserman, 2016) is a network that measures how well mouth movements in a video match the speech audio. This package wraps the original SyncNet model and its S3FD face detector in one Python class and one command. Given a video, it finds and tracks faces, crops each face track, and returns three numbers per track: the audio-video offset in frames, the SyncNet confidence (LSE-C, higher means better sync), and the minimum audio-video feature distance (LSE-D, lower means better sync).
 
-## Overview
+## Quickstart
 
-SyncNet Python is a PyTorch implementation of the SyncNet model, which detects audio-visual synchronization in videos. It can identify lip-sync errors by analyzing the correspondence between mouth movements and spoken audio.
-
-## Features
-
-### Core Functionality
-- 🎥 **Audio-Visual Sync Detection**: Accurately detect synchronization between audio and video
-- 🔍 **Face Detection**: Automatic face detection and tracking using S3FD
-- 📊 **Detailed Analysis**: Per-crop offsets, confidence scores, and minimum distances
-- 🚀 **Batch Processing**: Process multiple videos efficiently
-- 🐍 **Python API**: Easy-to-use Python interface with proper error handling
-
-### Architecture Improvements
-- 🏗️ **Clean Architecture**: Abstract base classes and factory patterns
-- ⚡ **Performance Optimized**: Parallel processing and memory management
-- 🛡️ **Robust Error Handling**: Comprehensive exception hierarchy
-- ⚙️ **Configuration Management**: YAML/JSON configuration support
-- 📝 **Advanced Logging**: Structured logging with progress tracking
-- 🔄 **Backward Compatibility**: Maintains compatibility with original API
-
-## Installation
+### 1. Install
 
 ```bash
-pip install syncnet-python
+pip install syncnet-python "scenedetect[opencv]<0.7"
 ```
 
-### Additional Requirements
+You also need `ffmpeg` on your `PATH` (`brew install ffmpeg` or `sudo apt-get install ffmpeg`).
 
-1. **FFmpeg**: Required for video processing
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get install ffmpeg
-   
-   # macOS
-   brew install ffmpeg
-   ```
+Install the `scenedetect<0.7` pin together with the package. Version 0.2.2 on PyPI declares `scenedetect>=0.6.0`, so pip installs scenedetect 0.7.x, which removed the `scenedetect.video_manager` module the pipeline imports. Without the pin, `from syncnet_python import SyncNetPipeline` gives `None`.
 
-2. **Model Weights**: Download pre-trained weights
-   - Download `sfd_face.pth` and `syncnet_v2.model`
-   - Place them in a `weights/` directory
+### 2. Download the weights
 
-## Quick Start
+The package does not include the model weights. Both files come from the Oxford VGG SyncNet page, the same URLs that the original repository's `download_model.sh` uses:
+
+```bash
+mkdir -p weights
+wget https://www.robots.ox.ac.uk/~vgg/software/lipsync/data/syncnet_v2.model -O weights/syncnet_v2.model
+wget https://www.robots.ox.ac.uk/~vgg/software/lipsync/data/sfd_face.pth -O weights/sfd_face.pth
+```
+
+The same two files are also in the [`weights/`](weights/) folder of this repository. They are byte-identical to the Oxford files (SHA-256 `961e8696…5442` for `syncnet_v2.model` and `d54a87c2…c491` for `sfd_face.pth`).
+
+### 3. Python API
 
 ```python
 from syncnet_python import SyncNetPipeline
 
-# Initialize pipeline
-pipeline = SyncNetPipeline(
-    s3fd_weights="weights/sfd_face.pth",
-    syncnet_weights="weights/syncnet_v2.model",
-    device="cuda"  # or "cpu"
+pipe = SyncNetPipeline(
+    {"s3fd_weights": "weights/sfd_face.pth", "syncnet_weights": "weights/syncnet_v2.model"},
+    device="cpu",  # or "cuda"
 )
-
-# Process video
-results = pipeline.inference(
-    video_path="video.mp4",
-    audio_path=None  # Extract from video
+offsets, confs, dists, best_conf, min_dist, s3fd_json, has_face = pipe.inference(
+    video_path="clip.mp4",
+    audio_path=None,  # None uses the video's own audio track; or pass a .wav path
 )
-
-# Extract results (returns tuple)
-offset_list, confidence_list, min_dist_list, best_confidence, best_min_dist, detections_json, success = results
-
-# Get best results
-offset = offset_list[0]  # AV offset in frames
-confidence = confidence_list[0]  # Confidence score
-min_distance = min_dist_list[0]  # Minimum distance
-
-print(f"AV Offset: {offset} frames")
-print(f"Confidence: {confidence:.3f}")
-print(f"Min Distance: {min_distance:.3f}")
+print("AV offset (frames):", offsets[0])
+print("LSE-C (confidence):", round(best_conf, 3))
+print("LSE-D (min distance):", round(min_dist, 3))
 ```
 
-### Detailed Analysis
+`offsets`, `confs` and `dists` are lists with one entry per face track. `best_conf` is the largest confidence over all tracks and `min_dist` is the smallest distance over all tracks. For a video with one face these equal `confs[0]` and `dists[0]`. With several faces the two values can come from different tracks, so use the per-track lists if you need scores for one speaker.
 
-```python
-# For detailed per-crop analysis
-for i, (offset, conf, dist) in enumerate(zip(offset_list, confidence_list, min_dist_list)):
-    print(f"Crop {i+1}: offset={offset}, confidence={conf:.3f}, min_dist={dist:.3f}")
+`syncnet_python.calculate_lse_metrics(pipe, video_path)` returns `(lse_c, lse_d, quality_label)` from the same values.
 
-# Parse face detections
-import json
-detections = json.loads(detections_json)
-print(f"Total frames with face detection: {len(detections)}")
-```
-
-## Command Line Usage
+### 4. Command line
 
 ```bash
-# Process single video
-syncnet-python video.mp4
-
-# Process multiple videos
-syncnet-python video1.mp4 video2.mp4 --output results.json
-
-# Use CPU instead of GPU
-syncnet-python video.mp4 --device cpu
+syncnet-python clip.mp4 --device cpu -o results.json
 ```
 
-## Performance
+The command reads the weights from `weights/` in the current directory by default; change this with `--s3fd-weights` and `--syncnet-weights`. It prints the offset and confidence for each video and writes offset, confidence and minimum distance to the JSON file. The default device is `cuda`, so pass `--device cpu` on a machine without an NVIDIA GPU.
 
-Tested with example files:
-- **Processing Speed**: 191.4 fps
-- **Face Detection**: 100% success rate
-- **Accuracy**: Detects 1-frame offsets with high confidence (4.5+)
-- **Compute Time**: ~0.65 seconds for 134 frames
+### Tested setup
 
-## Architecture
+The examples above were run on 2026-10-06 on an Apple Silicon Mac (CPU) with `syncnet-python==0.2.2` from PyPI, using [`example/video.avi`](example/video.avi) converted to MP4:
 
-### Refactored Core Modules
-- `syncnet/core/` - Modern refactored implementation
-  - `base.py` - Abstract base classes and interfaces
-  - `models.py` - Enhanced SyncNet model with factory pattern
-  - `audio.py` - MFCC audio processing with streaming support
-  - `video.py` - Parallel video processing with OpenCV
-  - `sync_analyzer.py` - Optimized sync analysis with caching
-  - `config.py` - Configuration management system
-  - `exceptions.py` - Comprehensive error handling
-  - `logging.py` - Advanced logging with progress tracking
-  - `utils.py` - Memory management and utility functions
+| Python | PyTorch | NumPy | OpenCV | scenedetect | Offset | LSE-C | LSE-D |
+|---|---|---|---|---|---|---|---|
+| 3.13 | 2.14.1 | 2.5.3 | 5.0.0 | 0.6.7.1 | 1 | 4.529 | 9.237 |
+| 3.9 | 2.2.2 | 1.26.4 | 4.11.0 | 0.6.7.1 | 1 | 4.524 | 9.291 |
 
-### Legacy Compatibility
-- `syncnet_python/` - Maintains original API compatibility
-- Full backward compatibility with existing code
+The Python 3.9 run needed `numpy<2` and `opencv-python<4.12` installed by hand, because the installer picked PyTorch 2.2.2 there and that build does not work with NumPy 2. The full run on the 5.3-second clip took about 10 seconds on CPU.
 
-## Requirements
+The `main` branch of this repository is at version 0.2.1, one release behind PyPI. In 0.2.1, `audio_path=None` fails, so pass an audio file if you install from source.
 
-- Python 3.9+ (tested on 3.13)
-- PyTorch 2.0+
-- CUDA (optional but recommended)
-- FFmpeg
-- Additional dependencies: OpenCV, SciPy, NumPy, pandas
+## Comparison with joonson/syncnet_python
+
+The original repository, [joonson/syncnet_python](https://github.com/joonson/syncnet_python), was updated by its author on 2026-04-17 (PR #78). This table compares that version with this package.
+
+| | joonson/syncnet_python (2026-04) | syncnet-python 0.2.2 |
+|---|---|---|
+| Install | clone, then `conda env create -f environment.yml`; no `setup.py` or `pyproject.toml` | `pip install syncnet-python` |
+| Python | 3.10 (pinned in `environment.yml`) | 3.9 to 3.13 (3.9 and 3.13 tested above) |
+| PyTorch | 2.5.1 (pinned) | `torch>=2.0.0` |
+| scenedetect | 0.6.7.1 (pinned) | 0.6.x (`>=0.6.0` declared; 0.7 breaks the import, see above) |
+| Python API | none; the scripts are run from the clone | `SyncNetPipeline(...).inference(video_path, audio_path)` |
+| Command line | `run_pipeline.py`, `run_syncnet.py`, `run_visualise.py` run in sequence, plus `demo_syncnet.py` for pre-cropped clips | one `syncnet-python` command that runs detection, tracking, cropping and scoring |
+| Output | offset, minimum distance and confidence written to the log; per-frame distances saved as `activesd.pckl` under `--data_dir` | values returned to Python, or written to JSON by the CLI |
+| Weights | downloaded by `download_model.sh` | downloaded separately (see above) |
+| Visualisation of the result | `run_visualise.py` | not included |
+
+## Errors this fixes
+
+Before the April 2026 update, the original repository pinned `scenedetect==0.5.1` and used `np.int`. Users hit these two errors in `run_pipeline.py`:
+
+```
+TypeError: 'tuple' object does not support item assignment
+```
+
+This comes from scenedetect 0.5.1's `ContentDetector` running with newer OpenCV (upstream issues [#55](https://github.com/joonson/syncnet_python/issues/55) and [#69](https://github.com/joonson/syncnet_python/issues/69)). This package uses scenedetect 0.6.
+
+```
+AttributeError: module 'numpy' has no attribute 'int'.
+```
+
+This comes from `.astype(np.int)` in `detectors/s3fd/box_utils.py`. NumPy 1.24 removed `np.int`. This package uses `.astype(int)`.
+
+## Repository layout
+
+The PyPI package contains only the `syncnet_python/` folder. Its `syncnet_pipeline.py`, `SyncNetInstance.py` and the scripts named `run_syncnet_pipeline_on_*.py` come from the SyncNet evaluation code in [MoChaBench](https://github.com/congwei1230/MoChaBench) (`eval-lipsync/script/`), which builds on the original repository. This package adds error handling around the `ffmpeg` calls.
+
+The `syncnet/` folder holds a separate refactor with configuration files, logging and batch helpers. It is in this repository only and pip does not install it. `scripts/` has example scripts, and `example/` has a short test video with its audio.
 
 ## Credits
 
-This package is based on the original [SyncNet implementation](https://github.com/joonson/syncnet_python) by Joon Son Chung, enhanced with modern Python architecture and performance optimizations.
+The SyncNet model, the pretrained weights and the original code are by Joon Son Chung and Andrew Zisserman ([joonson/syncnet_python](https://github.com/joonson/syncnet_python), [project page](https://www.robots.ox.ac.uk/~vgg/software/lipsync/)). The pipeline class is adapted from [MoChaBench](https://github.com/congwei1230/MoChaBench).
 
 ## Citation
 
 If you use this code in your research, please cite the original paper:
 
 ```bibtex
-@inproceedings{chung2016out,
-  title={Out of time: automated lip sync in the wild},
-  author={Chung, Joon Son and Zisserman, Andrew},
-  booktitle={Asian Conference on Computer Vision},
-  year={2016}
+@InProceedings{Chung16a,
+  author       = "Chung, J.~S. and Zisserman, A.",
+  title        = "Out of time: automated lip sync in the wild",
+  booktitle    = "Workshop on Multi-view Lip-reading, ACCV",
+  year         = "2016",
 }
 ```
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT. See [LICENSE](LICENSE).
 
 ## Links
 
-- GitHub: https://github.com/yourusername/syncnet-python
-- Documentation: https://syncnet-python.readthedocs.io
-- Issues: https://github.com/yourusername/syncnet-python/issues
+- Source and issues: https://github.com/nawta/SyncNet_py309_313
+- PyPI: https://pypi.org/project/syncnet-python/
+- Original SyncNet: https://github.com/joonson/syncnet_python
