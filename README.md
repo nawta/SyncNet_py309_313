@@ -13,12 +13,14 @@ SyncNet (Chung and Zisserman, 2016) is a network that measures how well mouth mo
 ### 1. Install
 
 ```bash
-pip install syncnet-python "scenedetect[opencv]<0.7"
+pip install syncnet-python "scenedetect<0.7"
 ```
 
 You also need `ffmpeg` on your `PATH` (`brew install ffmpeg` or `sudo apt-get install ffmpeg`).
 
 Install the `scenedetect<0.7` pin together with the package. Version 0.2.2 on PyPI declares `scenedetect>=0.6.0`, so pip installs scenedetect 0.7.x, which removed the `scenedetect.video_manager` module the pipeline imports. Without the pin, `from syncnet_python import SyncNetPipeline` gives `None`.
+
+This command installs two OpenCV packages, `opencv-python` (required by `scenedetect[opencv]`) and `opencv-contrib-python` (required by this package). Both provide the `cv2` module. In a fresh environment the installer picks the same version for both (5.0.0.93 on 2026-10-06) and `cv2` works. If you later uninstall either package, `cv2` breaks; fix it with `pip install --force-reinstall opencv-contrib-python` at the version you have.
 
 ### 2. Download the weights
 
@@ -64,14 +66,14 @@ The command reads the weights from `weights/` in the current directory by defaul
 
 ### Tested setup
 
-The examples above were run on 2026-10-06 on an Apple Silicon Mac (CPU) with `syncnet-python==0.2.2` from PyPI, using [`example/video.avi`](example/video.avi) converted to MP4:
+The examples above were run on 2026-10-06 on an Apple Silicon Mac (CPU) with `syncnet-python==0.2.2` from PyPI, using [`example/video.avi`](example/video.avi) converted to MP4. The OpenCV column gives the version of `opencv-contrib-python`; `opencv-python` was at the same version in each run.
 
 | Python | PyTorch | NumPy | OpenCV | scenedetect | Offset | LSE-C | LSE-D |
 |---|---|---|---|---|---|---|---|
-| 3.13 | 2.14.1 | 2.5.3 | 5.0.0 | 0.6.7.1 | 1 | 4.529 | 9.237 |
-| 3.9 | 2.2.2 | 1.26.4 | 4.11.0 | 0.6.7.1 | 1 | 4.524 | 9.291 |
+| 3.13 (arm64) | 2.14.1 | 2.5.3 | 5.0.0 | 0.6.7.1 | 1 | 4.529 | 9.237 |
+| 3.9 (x86_64 under Rosetta 2) | 2.2.2 | 1.26.4 | 4.11.0 | 0.6.7.1 | 1 | 4.524 | 9.291 |
 
-The Python 3.9 run needed `numpy<2` and `opencv-python<4.12` installed by hand, because the installer picked PyTorch 2.2.2 there and that build does not work with NumPy 2. The full run on the 5.3-second clip took about 10 seconds on CPU.
+The Python 3.9 interpreter was an x86_64 build running under Rosetta 2. PyTorch 2.2.2 is the newest release with macOS x86_64 wheels, and it does not work with NumPy 2, so this run needed `numpy<2`, `opencv-python<4.12` and `opencv-contrib-python<4.12` installed by hand. The full run on the 5.3-second clip took about 10 seconds on CPU.
 
 The `main` branch of this repository is at version 0.2.1, one release behind PyPI. In 0.2.1, `audio_path=None` fails, so pass an audio file if you install from source.
 
@@ -85,7 +87,7 @@ The original repository, [joonson/syncnet_python](https://github.com/joonson/syn
 | Python | 3.10 (pinned in `environment.yml`) | 3.9 to 3.13 (3.9 and 3.13 tested above) |
 | PyTorch | 2.5.1 (pinned) | `torch>=2.0.0` |
 | scenedetect | 0.6.7.1 (pinned) | 0.6.x (`>=0.6.0` declared; 0.7 breaks the import, see above) |
-| Python API | none; the scripts are run from the clone | `SyncNetPipeline(...).inference(video_path, audio_path)` |
+| Python API | `SyncNetInstance.evaluate()` and `extract_feature()` score a pre-cropped face clip; face detection, tracking and cropping run only through `run_pipeline.py` | `SyncNetPipeline(...).inference(video_path, audio_path)` runs face detection, tracking, cropping and scoring in one call |
 | Command line | `run_pipeline.py`, `run_syncnet.py`, `run_visualise.py` run in sequence, plus `demo_syncnet.py` for pre-cropped clips | one `syncnet-python` command that runs detection, tracking, cropping and scoring |
 | Output | offset, minimum distance and confidence written to the log; per-frame distances saved as `activesd.pckl` under `--data_dir` | values returned to Python, or written to JSON by the CLI |
 | Weights | downloaded by `download_model.sh` | downloaded separately (see above) |
@@ -109,13 +111,13 @@ This comes from `.astype(np.int)` in `detectors/s3fd/box_utils.py`. NumPy 1.24 r
 
 ## Repository layout
 
-The PyPI package contains only the `syncnet_python/` folder. Its `syncnet_pipeline.py`, `SyncNetInstance.py` and the scripts named `run_syncnet_pipeline_on_*.py` come from the SyncNet evaluation code in [MoChaBench](https://github.com/congwei1230/MoChaBench) (`eval-lipsync/script/`), which builds on the original repository. This package adds error handling around the `ffmpeg` calls.
+The PyPI package contains only the `syncnet_python/` folder. Most of its files (`syncnet_pipeline.py`, `SyncNetInstance.py`, `SyncNetModel.py`, `detectors/` and the scripts named `run_syncnet_pipeline_on_*.py`) come from the SyncNet evaluation code in [MoChaBench](https://github.com/congwei1230/MoChaBench) (`eval-lipsync/script/`), which builds on the original repository. This package adds error handling around the `ffmpeg` calls in `syncnet_pipeline.py`, plus `cli.py`.
 
 The `syncnet/` folder holds a separate refactor with configuration files, logging and batch helpers. It is in this repository only and pip does not install it. `scripts/` has example scripts, and `example/` has a short test video with its audio.
 
 ## Credits
 
-The SyncNet model, the pretrained weights and the original code are by Joon Son Chung and Andrew Zisserman ([joonson/syncnet_python](https://github.com/joonson/syncnet_python), [project page](https://www.robots.ox.ac.uk/~vgg/software/lipsync/)). The pipeline class is adapted from [MoChaBench](https://github.com/congwei1230/MoChaBench).
+The SyncNet model, its pretrained weights and the original code are by Joon Son Chung and Andrew Zisserman ([joonson/syncnet_python](https://github.com/joonson/syncnet_python), [project page](https://www.robots.ox.ac.uk/~vgg/software/lipsync/)). The S3FD face detector weights (`sfd_face.pth`) are downloaded from the same page. The model, detector and pipeline files in `syncnet_python/` come from [MoChaBench](https://github.com/congwei1230/MoChaBench); [NOTICE](NOTICE) lists them.
 
 ## Citation
 
@@ -132,7 +134,12 @@ If you use this code in your research, please cite the original paper:
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+This repository uses two licenses. [NOTICE](NOTICE) lists which file falls under which.
+
+- The original SyncNet code by Joon Son Chung and the code written for this repository are under the MIT License ([LICENSE](LICENSE)).
+- The files taken from MoChaBench are under the Apache License 2.0 ([LICENSE-APACHE](LICENSE-APACHE)).
+
+The model weights have their own terms. The Oxford VGG SyncNet page says: "The model can be used for research purposes under Creative Commons Attribution License." The MIT and Apache licenses above do not cover the weights.
 
 ## Links
 
