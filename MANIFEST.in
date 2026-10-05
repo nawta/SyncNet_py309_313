@@ -5,9 +5,8 @@ include NOTICE
 include INSTALL.md
 include requirements.txt
 
-# Include example files
-include example/*.wav
-include example/*.avi
+# Example media stay in the GitHub repository only; their source is not documented.
+prune example
 
 # Include scripts
 recursive-include scripts *.py

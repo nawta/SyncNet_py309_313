@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/syncnet-python.svg)](https://badge.fury.io/py/syncnet-python)
 [![Python](https://img.shields.io/pypi/pyversions/syncnet-python.svg)](https://pypi.org/project/syncnet-python/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT AND Apache-2.0](https://img.shields.io/badge/License-MIT%20AND%20Apache--2.0-yellow.svg)](https://github.com/nawta/SyncNet_py309_313/blob/main/NOTICE)
 
 A pip-installable SyncNet for Python 3.9 to 3.13 and PyTorch 2. It computes the confidence and minimum distance scores that talking-head and lip-sync papers report as LSE-C and LSE-D.
 
