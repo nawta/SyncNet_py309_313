@@ -1,5 +1,7 @@
 include README.md
 include LICENSE
+include LICENSE-APACHE
+include NOTICE
 include INSTALL.md
 include CLAUDE.md
 include requirements.txt
